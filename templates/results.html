@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VRChat Log Analysis Results</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        .time-range {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .time-range h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .time-display {
+            font-family: monospace;
+            font-size: 16px;
+            color: #0056b3;
+        }
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .users-table th,
+        .users-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .users-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        .users-table th:hover {
+            background-color: #e9ecef;
+        }
+        .users-table th.sortable::after {
+            content: ' ↕️';
+            opacity: 0.5;
+        }
+        .users-table th.sort-asc::after {
+            content: ' ↑';
+            opacity: 1;
+            color: #007bff;
+        }
+        .users-table th.sort-desc::after {
+            content: ' ↓';
+            opacity: 1;
+            color: #007bff;
+        }
+        .users-table tr:hover {
+            background-color: #f8f9fa;
+        }
+        .username {
+            font-weight: 500;
+            color: #333;
+        }
+        .duration {
+            color: #28a745;
+            font-weight: 500;
+        }
+        .joins-leaves {
+            color: #666;
+            font-size: 14px;
+        }
+        .back-button {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        .back-button:hover {
+            background-color: #545b62;
+            text-decoration: none;
+            color: white;
+        }
+        .export-buttons {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .export-btn {
+            background-color: #28a745;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 3px;
+            margin: 0 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .export-btn:hover {
+            background-color: #218838;
+            text-decoration: none;
+            color: white;
+        }
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .search-box {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            width: 100%;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        @media (max-width: 768px) {
+            .users-table {
+                font-size: 14px;
+            }
+            .users-table th,
+            .users-table td {
+                padding: 8px;
+            }
+        }
+        
+        /* Session styles */
+        .sessions-container {
+            margin: 30px 0;
+        }
+        .sessions-container h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .session-detail {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .session-summary {
+            padding: 15px 20px;
+            cursor: pointer;
+            background: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .session-summary:hover {
+            background: #e9ecef;
+        }
+        .session-detail[open] .session-summary {
+            border-radius: 8px 8px 0 0;
+        }
+        .session-info strong {
+            color: #007bff;
+            font-size: 1.1em;
+        }
+        .session-info small {
+            display: block;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+        .session-content {
+            padding: 20px;
+        }
+        .session-details {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .session-details p {
+            margin: 8px 0;
+        }
+        .session-details code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        .session-events h4 {
+            color: #333;
+            margin: 0 0 15px 0;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 5px;
+        }
+        .event-group {
+            margin-bottom: 20px;
+        }
+        .event-group h5 {
+            color: #666;
+            margin: 0 0 10px 0;
+            font-size: 1em;
+        }
+        .event-list {
+            list-style: none;
+            padding: 0;
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        .event-list li {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .event-list li:last-child {
+            border-bottom: none;
+        }
+        .event-time {
+            font-family: 'Courier New', monospace;
+            background: #007bff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            min-width: 70px;
+            text-align: center;
+        }
+        .event-user {
+            font-weight: 500;
+            color: #333;
+            flex: 1;
+        }
+        .event-reason {
+            font-style: italic;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        /* Session table specific styles */
+        .session-table-container {
+            margin-top: 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .session-table {
+            margin: 0;
+            font-size: 0.9em;
+        }
+        .session-table th {
+            background: #6c757d;
+            color: white;
+            font-size: 0.85em;
+            padding: 10px 8px;
+        }
+        .session-table td {
+            padding: 8px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .session-table tbody tr:hover {
+            background-color: #f1f3f5;
+        }
+        .session-users h4 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        /* User link styles */
+        .user-link {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .user-link:hover {
+            color: #0056b3;
+            text-decoration: none;
+            border-bottom-color: #0056b3;
+        }
+        .user-link:visited {
+            color: #6f42c1;
+        }
+        .user-link:visited:hover {
+            color: #5a2d91;
+        }
+        /* Add a small external link icon */
+        .user-link::after {
+            content: ' 🔗';
+            font-size: 0.8em;
+            opacity: 0.6;
+            margin-left: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{{ url_for('index') }}" class="back-button">← Back to Upload</a>
+        
+        <div class="header">
+            <h1>📊 Analysis Results</h1>
+        </div>
+
+        <div class="time-range">
+            <h3>📅 Time Range Analyzed</h3>
+            <div class="time-display">
+                {% if start_time and end_time %}
+                    {{ start_time.strftime('%Y-%m-%d %H:%M:%S') }} → {{ end_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                {% else %}
+                    All logs (no time filter applied)
+                {% endif %}
+            </div>
+            {% if start_time and end_time %}
+            <div style="margin-top: 10px; color: #666;">
+                Duration: {{ ((end_time - start_time).total_seconds() / 60) | round(1) }} minutes
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="summary">
+            <div class="stat-card">
+                <div class="stat-number">{{ sessions|length }}</div>
+                <div class="stat-label">Total Sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ total_join_events }}</div>
+                <div class="stat-label">Total Join Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ total_leave_events }}</div>
+                <div class="stat-label">Total Leave Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ sessions | map(attribute='users') | map('length') | sum }}</div>
+                <div class="stat-label">Total Unique Users</div>
+            </div>
+        </div>
+
+        {% if sessions %}
+        <div class="sessions-container">
+            <h3>🌍 Sessions by Worlds/Rooms</h3>
+            <p style="color: #666; margin-bottom: 20px;">
+                Found {{ sessions|length }} session(s). Click to expand and see user activity in each world/room.
+            </p>
+            
+            {% for session in sessions %}
+            <details class="session-detail">
+                <summary class="session-summary">
+                    <span class="session-info">
+                        <strong>{{ session.room_name or "Unknown Room" }}</strong>
+                        <small style="color: #666;">
+                            {{ session.session_start.strftime('%Y-%m-%d %H:%M:%S') }}
+                            | {{ session.users|length }} users in session
+                        </small>
+                    </span>
+                </summary>
+                <div class="session-content">
+                    <div class="session-details">
+                        <p><strong>World ID:</strong> <code>{{ session.world_id }}</code></p>
+                        <p><strong>Session Start:</strong> {{ session.session_start.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                        {% if session.room_name %}
+                        <p><strong>Room Name:</strong> {{ session.room_name }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    {% if session.users %}
+                    <div class="session-users">
+                        <h4>📊 User Statistics for This Session ({{ session.users|length }} users):</h4>
+                        
+                        <div class="session-table-container">
+                            <table class="users-table session-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" data-column="0" data-type="text">👤 Username</th>
+                                        <th class="sortable" data-column="1" data-type="number">⏱️ Duration in Session</th>
+                                        <th class="sortable" data-column="2" data-type="number">📊 Join Events</th>
+                                        <th class="sortable" data-column="3" data-type="number">📊 Leave Events</th>
+                                        <th class="sortable" data-column="4" data-type="time">🟢 First Join</th>
+                                        <th class="sortable" data-column="5" data-type="time">🔴 Last Leave</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in session.users %}
+                                    <tr>
+                                        <td class="username">
+                                            {% if user.user_id %}
+                                                <a href="https://vrchat.com/home/user/{{ user.user_id }}" target="_blank" class="user-link">{{ user.username }}</a>
+                                            {% else %}
+                                                {{ user.username }}
+                                            {% endif %}
+                                        </td>
+                                        <td class="duration">{{ user.online_duration_minutes | round(1) }} min</td>
+                                        <td class="join-events">{{ user.total_joins }}</td>
+                                        <td class="leave-events">{{ user.total_leaves }}</td>
+                                        <td>
+                                            {% if user.first_join %}
+                                                {{ user.first_join.strftime('%H:%M:%S') }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if user.last_leave %}
+                                                {{ user.last_leave.strftime('%H:%M:%S') }}
+                                            {% else %}
+                                                Still online
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p style="color: #666; font-style: italic;">No user join/leave events recorded for this session.</p>
+                    {% endif %}
+                </div>
+            </details>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </div>
+
+    <script>
+        // Show keyboard shortcuts help
+        console.log('🌍 VRChat Session Analysis');
+        console.log('Click on session dropdowns to view detailed user tables');
+        console.log('Each table is independently sortable');
+
+        // Sortable table functionality
+        let currentSort = { column: null, direction: 'asc' };
+        
+        document.querySelectorAll('.sortable').forEach(header => {
+            header.addEventListener('click', function() {
+                const column = parseInt(this.dataset.column);
+                const type = this.dataset.type;
+                
+                // Find the table this header belongs to
+                const table = this.closest('table');
+                const tbody = table.querySelector('tbody');
+                
+                // Toggle sort direction if clicking the same column
+                if (currentSort.column === column) {
+                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSort.direction = 'asc';
+                    currentSort.column = column;
+                }
+                
+                // Update sort indicators only for this table
+                table.querySelectorAll('.sortable').forEach(h => {
+                    h.classList.remove('sort-asc', 'sort-desc');
+                });
+                this.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                
+                // Sort the table
+                sortTable(tbody, column, type, currentSort.direction);
+            });
+        });
+        
+        function sortTable(tbody, column, type, direction) {
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            rows.sort((a, b) => {
+                const aValue = a.cells[column].textContent.trim();
+                const bValue = b.cells[column].textContent.trim();
+                
+                let comparison = 0;
+                
+                switch(type) {
+                    case 'text':
+                        comparison = aValue.localeCompare(bValue);
+                        break;
+                    case 'number':
+                        const aNum = parseFloat(aValue) || 0;
+                        const bNum = parseFloat(bValue) || 0;
+                        comparison = aNum - bNum;
+                        break;
+                    case 'time':
+                        if (aValue === '-' && bValue === '-') comparison = 0;
+                        else if (aValue === '-') comparison = 1;
+                        else if (bValue === '-') comparison = -1;
+                        else if (aValue === 'Still online' && bValue === 'Still online') comparison = 0;
+                        else if (aValue === 'Still online') comparison = 1;
+                        else if (bValue === 'Still online') comparison = -1;
+                        else {
+                            const aTime = new Date(`1970-01-01T${aValue}`);
+                            const bTime = new Date(`1970-01-01T${bValue}`);
+                            comparison = aTime - bTime;
+                        }
+                        break;
+                }
+                
+                return direction === 'asc' ? comparison : -comparison;
+            });
+            
+            // Clear tbody and append sorted rows
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
+</body>
+</html>
