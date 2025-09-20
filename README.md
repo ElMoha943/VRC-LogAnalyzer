@@ -32,3 +32,9 @@ pip install -r requirements.txt
    ```
 
 3. **Upload your log file and specify the time range you want to analyze**
+
+## Pictures
+<img width="814" height="537" alt="image" src="https://github.com/user-attachments/assets/91c08bca-6832-4220-9a9f-48968e1a396a" />
+<img width="1208" height="962" alt="image" src="https://github.com/user-attachments/assets/020f25af-0fc7-40e2-a65b-270b93049cd1" />
+<img width="1175" height="970" alt="image" src="https://github.com/user-attachments/assets/6591562b-69fd-4a85-8f33-6f8ea378384c" />
+
